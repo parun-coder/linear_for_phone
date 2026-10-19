@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Awakening of the Gyroscope — Live Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,500;0,600;0,700;0,800;0,900;1,900&family=Kanit:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* โทนเดียวกับสไลด์ Awakening of the Gyroscope: พื้นครีม หมึกน้ำเงินเข้ม สีเน้นแดง */
+:root {
+  --bg: #EAE2B7; --ink: #003049; --muted: rgba(0,48,73,.74); --line: rgba(0,48,73,.18); --stroke: rgba(0,48,73,.32);
+  --red: #D62828; --orange: #F77F00; --yellow: #FCBF49; --blush: #F08A8A;
+  --display: "Montserrat", "Kanit", system-ui, sans-serif;
+  --thai: "Kanit", "IBM Plex Sans Thai", system-ui, sans-serif;
+  --body: "IBM Plex Sans Thai", "Kanit", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  /* สีประจำกิจกรรม: ท่าเคลื่อนไหว = โทนร้อน, ท่านิ่ง = โทนน้ำเงิน */
+  --c-walking: #D62828; --c-upstairs: #F77F00; --c-downstairs: #8C1C13;
+  --c-sitting: #003049; --c-standing: #3E6E85; --c-laying_left: #7FA3B3;
+  --page: #003049; --on-page: #EAE2B7; --on-page-muted: rgba(234,226,183,.68);
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--page); color: var(--on-page); }
+body { font-family: var(--body); min-height: 100vh; }
+
+/* ของตกแต่งด้านซ้ายแบบเดียวกับสไลด์ */
+#ham { position: fixed; left: 44px; top: 42px; display: flex; flex-direction: column; gap: 6px; }
+#ham i { display: block; height: 2px; background: var(--yellow); border-radius: 2px; }
+#ham i:nth-child(1), #ham i:nth-child(3) { width: 26px; } #ham i:nth-child(2) { width: 16px; }
+.vlabel { position: fixed; left: 51px; top: 50%; transform: translate(-50%,-50%) rotate(-90deg);
+  white-space: nowrap; font: 700 11px var(--display); letter-spacing: .22em; text-transform: uppercase;
+  display: flex; align-items: center; gap: 14px; }
+.vlabel::after { content: ""; width: 46px; height: 1.5px; background: var(--yellow); }
+#bar { position: fixed; left: 0; bottom: 0; height: 3px; width: 0; background: var(--red); transition: width .5s cubic-bezier(.2,.7,.2,1); }
+
+.wrap { max-width: 1240px; margin: 0 auto; padding: 26px 56px 22px 120px; }
+
+/* ส่วนหัว */
+header { display: flex; align-items: flex-end; gap: 24px; flex-wrap: wrap; margin-bottom: 18px; }
+.titles { margin-right: auto; }
+.kicker { display: flex; align-items: center; gap: 12px; font: 700 14px var(--display); letter-spacing: .16em; text-transform: uppercase; color: var(--yellow); }
+.kicker::before { content: ""; height: 2px; width: 36px; background: var(--yellow); flex: none; }
+h1 { font: 700 34px/1.2 var(--thai); margin: 6px 0 0; letter-spacing: -.005em; }
+.course { font: 600 12px var(--display); letter-spacing: .14em; text-transform: uppercase; color: var(--on-page-muted); margin-bottom: 12px; text-align: right; }
+.controls { display: flex; flex-direction: column; align-items: flex-end; }
+.conn { display: flex; gap: 10px; align-items: center; }
+.status { display: inline-flex; align-items: center; gap: 8px; font: 700 12px var(--display); letter-spacing: .12em; text-transform: uppercase; color: var(--on-page-muted); margin-right: 6px; white-space: nowrap; }
+.status i { width: 8px; height: 8px; border-radius: 50%; background: rgba(234,226,183,.4); }
+.status[data-s="running"] i { background: var(--red); animation: blink 1.2s infinite; }
+.status[data-s="collecting"] i, .status[data-s="connecting"] i { background: var(--orange); animation: blink 1.2s infinite; }
+.status[data-s="error"] { color: var(--yellow); } .status[data-s="error"] i { background: var(--red); }
+@keyframes blink { 50% { opacity: .25; } }
+input { width: 230px; padding: 10px 16px; border-radius: 999px; border: 1.5px solid rgba(234,226,183,.35); background: rgba(234,226,183,.06);
+  color: var(--on-page); font: 500 13px var(--mono); }
+input:focus { outline: none; border-color: var(--yellow); }
+input:disabled { opacity: .6; }
+button { padding: 10px 22px; border-radius: 999px; border: 1.5px solid var(--red); background: var(--red); color: var(--bg);
+  font: 700 14px var(--thai); cursor: pointer; transition: transform .2s, background .2s, color .2s; }
+button:hover { transform: translateY(-2px); }
+button.stop { background: transparent; color: var(--on-page); border-color: rgba(234,226,183,.5); }
+
+/* การ์ด */
+.grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 18px; }
+.card { background: var(--bg); color: var(--ink); border-radius: 22px; padding: 18px 24px;
+  box-shadow: 0 30px 60px -32px rgba(0,0,0,.55), 0 0 0 1px rgba(234,226,183,.08); position: relative; overflow: hidden; }
+.lbl { display: flex; justify-content: space-between; gap: 12px; font: 600 13px var(--display); letter-spacing: .06em; color: var(--muted); }
+.lbl b { color: var(--red); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.hero { grid-column: span 7; display: flex; flex-direction: column; }
+.votes-card { grid-column: span 5; }
+.sig-card { grid-column: 1 / -1; }
+
+/* ตัวเลขโปร่งขอบแบบเลขหน้าสไลด์ */
+.onum { position: absolute; right: 22px; bottom: -16px; font: 800 118px/1 var(--display); letter-spacing: -.04em;
+  color: transparent; -webkit-text-stroke: 1.4px var(--stroke); pointer-events: none; user-select: none; }
+
+.hero-main { flex: 1; display: flex; align-items: center; gap: 28px; margin-top: 4px; position: relative; }
+.cat-big { width: 196px; height: 196px; flex: none; color: var(--ink); }
+#heroText { flex: 1; min-width: 0; position: relative; }
+.cat-big svg, .cat-sm svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.act-th { font: 700 68px/1.1 var(--thai); letter-spacing: -.01em; white-space: nowrap; }
+.act-en { margin-top: 6px; font: 700 14px var(--display); letter-spacing: .2em; text-transform: uppercase; color: var(--red); }
+.stat { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; }
+.stat .big { font: 800 40px/1 var(--display); color: var(--red); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.stat .big small { font-size: 22px; }
+.stat .cap { font-size: 15px; color: var(--muted); line-height: 1.45; white-space: nowrap; }
+.idle-msg { font-size: 19px; color: var(--muted); line-height: 1.6; max-width: 26ch; }
+.idle .act-th { font-size: 56px; white-space: normal; }
+
+.pop { animation: pop .65s cubic-bezier(.2,.9,.3,1.2) both; }
+@keyframes pop { from { opacity: 0; transform: scale(.82) rotate(-10deg); } to { opacity: 1; transform: none; } }
+.rise { animation: rise .6s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+/* ท่าทางเล็กๆ ของแมวแต่ละท่า */
+.m-walking svg, .m-upstairs svg, .m-downstairs svg { animation: bob .5s ease-in-out infinite alternate; }
+.m-laying_left svg { animation: breathe 2.4s ease-in-out infinite; transform-origin: 50% 80%; }
+@keyframes bob { to { transform: translateY(-6px); } }
+@keyframes breathe { 50% { transform: scaleY(1.035); } }
+
+/* ผลโหวต */
+.votes { display: flex; flex-direction: column; gap: 2px; margin-top: 10px; }
+.vote { display: grid; grid-template-columns: 44px 96px 1fr 30px; align-items: center; gap: 12px;
+  padding: 3px 14px 3px 8px; border-radius: 12px; transition: background .35s, color .35s; }
+.cat-sm { width: 40px; height: 40px; color: var(--ink); }
+.vote .name { font: 600 17px var(--thai); }
+.vote .track { height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.vote .track i { display: block; height: 100%; width: 0; border-radius: 99px; transition: width .5s cubic-bezier(.2,.7,.2,1); }
+.vote .n { text-align: right; font: 600 14px var(--mono); color: var(--muted); }
+.vote.top { background: var(--red); color: var(--bg); }
+.vote.top .cat-sm { color: var(--bg); }
+.vote.top .track { background: rgba(234,226,183,.3); }
+.vote.top .track i { background: var(--bg) !important; }
+.vote.top .n { color: var(--bg); }
+
+/* กราฟสัญญาณ */
+.scope { margin-top: 6px; }
+.scope svg { width: 100%; height: 120px; display: block; }
+.sig { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.grid-line { stroke: var(--line); stroke-width: 1; }
+.legend { display: flex; gap: 18px; flex-wrap: wrap; justify-content: flex-end; }
+.legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+
+
+footer { margin-top: 14px; font: 500 12px var(--mono); color: var(--on-page-muted); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+@media (max-width: 1080px) {
+  .hero, .votes-card, .sig-card { grid-column: 1 / -1; }
+}
+@media (max-width: 760px) {
+  #ham, .vlabel { display: none; }
+  .wrap { padding: 24px 16px 32px; }
+  h1 { font-size: 30px; }
+  .controls { align-items: stretch; width: 100%; }
+  .course { text-align: left; }
+  .conn { flex-wrap: wrap; }
+  input { flex: 1; min-width: 0; }
+  .hero-main { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .cat-big { width: 170px; height: 170px; }
+  .act-th { font-size: 56px; }
+  .onum { display: none; }
+  .onum { font-size: 110px; }
+  .vote { grid-template-columns: 40px 80px 1fr 26px; gap: 8px; }
+  .cat-sm { width: 40px; height: 40px; }
+}
+</style>
+</head>
+<body>
+<div id="ham"><i></i><i></i><i></i></div>
+<div class="vlabel">Awakening of the Gyroscope</div>
+<div id="bar"></div>
+
+<div class="wrap">
+  <header>
+    <div class="titles">
+      <div class="kicker">Live Demo · Wi-Fi</div>
+      <h1>ทำนายกิจกรรมแบบเรียลไทม์</h1>
+    </div>
+    <div class="controls">
+      <div class="course">01076032 · Linear Algebra · Model 2 (k = <span id="k">7</span>)</div>
+      <div class="conn">
+        <span class="status" id="status" data-s="idle"><i></i><span id="statusText">พร้อม</span></span>
+        <input id="url" spellcheck="false" placeholder="http://192.168.x.x:8080">
+        <button id="btn">เริ่ม</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <section class="card hero" id="hero">
+      <div class="lbl"><b>ตอนนี้กำลัง</b><span id="clock">0.0 s</span></div>
+      <div class="onum" id="onum">00</div>
+      <div class="hero-main">
+        <div class="cat-big" id="catBig"></div>
+        <div id="heroText"></div>
+      </div>
+    </section>
+
+    <section class="card votes-card">
+      <div class="lbl"><b>ผลโหวต</b><span>ทำนายทุก 0.5 s · 5 วินาทีล่าสุด</span></div>
+      <div class="votes" id="votes"></div>
+    </section>
+
+    <section class="card sig-card">
+      <div class="lbl"><b>สัญญาณ</b>
+        <span class="legend">
+          <span><i style="background:var(--red)"></i>|acc| m/s²</span>
+          <span><i style="background:var(--ink)"></i>|gyro| rad/s</span>
+          <span>Accelerometer + Gyroscope · 50 Hz · 5 s ล่าสุด</span>
+        </span></div>
+      <div class="scope"><svg id="scope" viewBox="0 0 1000 120" preserveAspectRatio="none"></svg></div>
+    </section>
+  </div>
+
+  <footer>
+    <span>x → 24 ฟีเจอร์ → scale → (x − μ)W → ŷ = argmin ‖z − cⱼ‖</span>
+    <span>window 2.56 s · vote 5 s</span>
+  </footer>
+</div>
+
+<script src="/web/cats.js"></script>
+<script>
+const ORDER = ["walking", "upstairs", "downstairs", "sitting", "standing", "laying_left"];
+const ACT = {
+  walking:     { th: "เดิน",     en: "Walking" },
+  upstairs:    { th: "ขึ้นบันได", en: "Upstairs" },
+  downstairs:  { th: "ลงบันได",  en: "Downstairs" },
+  sitting:     { th: "นั่ง",      en: "Sitting" },
+  standing:    { th: "ยืน",      en: "Standing" },
+  laying_left: { th: "นอน",      en: "Laying" },
+};
+const STATUS_TH = { idle: "พร้อม", connecting: "กำลังเชื่อมต่อ", collecting: "กำลังรวบรวมข้อมูล",
+                    running: "Live", stopped: "หยุดแล้ว", error: "เชื่อมต่อไม่ได้" };
+const $ = id => document.getElementById(id);
+const color = c => `var(--c-${c})`;
+
+// วาดแมวจากเวกเตอร์ใน cats.js (เส้นใช้สีตามตัวอักษร แก้มเป็นสีชมพู)
+function cat(c, blush = "var(--blush)") {
+  const v = window.CATS && CATS[c];
+  if (!v) return "";
+  return `<svg viewBox="0 0 ${v.size} ${v.size}" aria-hidden="true">
+    <path d="${v.ink}" fill="currentColor" fill-rule="evenodd"/>
+    <path d="${v.soft}" fill="currentColor" fill-rule="evenodd" opacity=".45"/>
+    <path d="${v.blush}" fill="${blush}" fill-rule="evenodd"/></svg>`;
+}
+
+$("votes").innerHTML = ORDER.map(c => `
+  <div class="vote" id="v-${c}">
+    <div class="cat-sm">${cat(c)}</div><span class="name">${ACT[c].th}</span>
+    <div class="track"><i style="background:${color(c)}"></i></div><span class="n">0</span>
+  </div>`).join("");
+fetch("/api/info").then(r => r.json()).then(i => $("k").textContent = i.k).catch(() => {});
+
+let running = false, shown = undefined, urlTouched = false;
+$("url").addEventListener("input", () => urlTouched = true);
+$("url").addEventListener("keydown", e => { if (e.key === "Enter" && !running) $("btn").click(); });
+$("btn").onclick = async () => {
+  const path = running ? "/api/stop" : "/api/start";
+  await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ url: $("url").value }) });
+  poll();
+};
+
+function renderHero(s, cur) {
+  const key = cur || ("idle-" + s.status);
+  if (key === shown) return;
+  shown = key;
+  const hero = $("hero");
+  hero.classList.toggle("idle", !cur);
+  const big = $("catBig");
+  big.className = "cat-big pop" + (cur ? " m-" + cur : "");
+  big.innerHTML = cat(cur || "sitting");
+  $("onum").textContent = cur ? String(ORDER.indexOf(cur) + 1).padStart(2, "0") : "00";
+  $("onum").classList.remove("rise"); void $("onum").offsetWidth; $("onum").classList.add("rise");
+  $("heroText").className = "rise";
+  $("heroText").innerHTML = cur
+    ? `<div class="act-th">${ACT[cur].th}</div><div class="act-en">${ACT[cur].en}</div>
+       <div class="stat"><span class="big" id="pct">0<small>%</small></span><span class="cap" id="pctCap"></span></div>`
+    : `<div class="act-th">${s.status === "error" ? "เชื่อมต่อไม่ได้" : "รอข้อมูล"}</div>
+       <p class="idle-msg" id="idleMsg"></p>`;
+}
+
+function render(s) {
+  running = ["connecting", "collecting", "running"].includes(s.status);
+  $("btn").textContent = running ? "หยุด" : "เริ่ม";
+  $("btn").classList.toggle("stop", running);
+  $("url").disabled = running;
+  if (!urlTouched && document.activeElement !== $("url")) $("url").value = s.url;
+  $("status").dataset.s = s.status;
+  $("statusText").textContent = STATUS_TH[s.status] || s.status;
+  $("clock").textContent = `${(s.t || 0).toFixed(1)} s`;
+
+  const cur = s.status === "running" ? s.current : null;
+  renderHero(s, cur);
+  const top = cur ? s.counts[cur] : 0;
+  if (cur) {
+    $("pct").innerHTML = `${s.total ? Math.round(100 * top / s.total) : 0}<small>%</small>`;
+    $("pctCap").innerHTML = `ตรงกัน ${top} จาก ${s.total} ครั้ง`;
+  } else if ($("idleMsg")) {
+    $("idleMsg").textContent = s.message || "กด เริ่ม เพื่อเชื่อมต่อกับ phyphox";
+  }
+  $("bar").style.width = cur && s.total ? (100 * top / s.total) + "%" : "0";
+
+  const max = Math.max(1, s.total);
+  for (const c of ORDER) {
+    const row = $("v-" + c), n = s.counts[c] || 0;
+    row.querySelector(".track i").style.width = (100 * n / max) + "%";
+    row.querySelector(".n").textContent = n;
+    const isTop = c === cur;
+    if (row.classList.contains("top") !== isTop) {
+      row.classList.toggle("top", isTop);
+      row.querySelector(".cat-sm").innerHTML = cat(c, isTop ? "var(--yellow)" : "var(--blush)");
+    }
+  }
+
+
+  drawScope(s.acc, s.gyr);
+}
+
+function drawScope(acc, gyr) {
+  const W = 1000, H = 120, P = 8;
+  let out = [1, 2, 3].map(i => `<line class="grid-line" x1="0" x2="${W}" y1="${H * i / 4}" y2="${H * i / 4}"/>`).join("");
+  if (acc.length > 1) {
+    const path = (arr, lo, hi) => {
+      const span = Math.max(hi - lo, 1e-6);
+      return arr.map((v, i) => `${(i / (arr.length - 1) * W).toFixed(1)},${(H - P - (v - lo) / span * (H - 2 * P)).toFixed(1)}`).join(" ");
+    };
+    const aLo = Math.min(...acc), aHi = Math.max(...acc), pad = Math.max(1, (aHi - aLo) * .15);
+    out += `<polyline class="sig" stroke="var(--ink)" vector-effect="non-scaling-stroke" points="${path(gyr, 0, Math.max(1, Math.max(...gyr) * 1.15))}"/>`;
+    out += `<polyline class="sig" stroke="var(--red)" vector-effect="non-scaling-stroke" points="${path(acc, aLo - pad, aHi + pad)}"/>`;
+  } else {
+    out += `<text x="${W / 2}" y="${H / 2 + 5}" text-anchor="middle" fill="var(--muted)" font-size="15" font-family="IBM Plex Sans Thai, sans-serif">ยังไม่มีข้อมูล</text>`;
+  }
+  $("scope").innerHTML = out;
+}
+
+async function poll() {
+  try {
+    const r = await fetch("/api/state", { cache: "no-store" });
+    render(await r.json());
+  } catch (e) {
+    $("status").dataset.s = "error";
+    $("statusText").textContent = "ติดต่อสคริปต์ Python ไม่ได้";
+  }
+}
+setInterval(poll, 300);
+poll();
+</script>
+</body>
+</html>
